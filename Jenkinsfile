@@ -4,7 +4,7 @@ pipeline {
     environment {
         AWS_REGION = 'ap-southeast-2'
         ECR_REPO = 'shopping-app'
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_TAG = "shoppingapp"
         AWS_ACCOUNT_ID = '424522917744'
         ECR_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
     }
@@ -56,6 +56,44 @@ pipeline {
             }
         }
     }
+
+    stage('Deploy to ECS') {
+    steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+            sh """
+                # Register new task definition revision
+                aws ecs register-task-definition \
+                    --family shoppingapp-task \
+                    --network-mode awsvpc \
+                    --requires-compatibilities FARGATE \
+                    --cpu 256 \
+                    --memory 512 \
+                    --execution-role-arn arn:aws:iam::424522917744:role/ecsTaskExecutionRole \
+                    --container-definitions '[
+                        {
+                            "name": "shoppingapp",
+                            "image": "${ECR_URI}:${IMAGE_TAG}",
+                            "essential": true,
+                            "portMappings": [
+                                {
+                                    "containerPort": 8080,
+                                    "protocol": "tcp"
+                                }
+                            ]
+                        }
+                    ]' \
+                    --region ap-southeast-2
+
+                # Update service with new revision
+                aws ecs update-service \
+                    --cluster shoppingapp \
+                    --service shoppingapp-service \
+                    --force-new-deployment \
+                    --region ap-southeast-2
+            """
+        }
+    }
+}
 
     post {
         success {
