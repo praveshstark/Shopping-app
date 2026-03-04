@@ -25,13 +25,19 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            steps {
-                script {
-                    sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
-                    sh "docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}"
-                }
-            }
+    steps {
+        script {
+            sh """
+                docker buildx build \
+                --platform linux/amd64 \
+                -t ${ECR_REPO}:${IMAGE_TAG} \
+                --load .
+            """
+
+            sh "docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}"
         }
+    }
+}
 
         stage('Login to ECR') {
             steps {
