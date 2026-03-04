@@ -1,0 +1,29 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - IMAGE_TAG=latest
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - REPO_URI=$ACCOUNT_ID.dkr.ecr.ap-southeast-2.amazonaws.com/shoppingapp
+      - aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin $REPO_URI
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - mvn clean package
+      - docker build -t shoppingapp:$IMAGE_TAG .
+      - docker tag shoppingapp:$IMAGE_TAG $REPO_URI:$IMAGE_TAG
+
+  post_build:
+    commands:
+      - echo Pushing image...
+      - docker push $REPO_URI:$IMAGE_TAG
+      - echo Writing imagedefinitions.json file...
+      - printf '[{"name":"shopping-app-container","imageUri":"%s"}]' $REPO_URI:$IMAGE_TAG > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
