@@ -7,7 +7,7 @@ phases:
       - aws --version
       - IMAGE_TAG=latest
       - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      - REPO_URI=$ACCOUNT_ID.dkr.ecr.ap-southeast-2.amazonaws.com/shoppingapp
+      - REPO_URI=424522917744.dkr.ecr.ap-southeast-2.amazonaws.com/shoppingapp
       - aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin $REPO_URI
 
   build:
