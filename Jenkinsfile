@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         AWS_REGION = 'ap-southeast-2'
-        ECR_REPO = 'shopping-app'
-        IMAGE_TAG = "shoppingapp"
         AWS_ACCOUNT_ID = '424522917744'
+        ECR_REPO = 'shopping-app'
+        IMAGE_TAG = 'shoppingapp'   // Hardcoded tag
         ECR_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
     }
 
@@ -24,76 +24,42 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-    steps {
-        script {
-            sh """
-                docker buildx build \
-                --platform linux/amd64 \
-                -t ${ECR_REPO}:${IMAGE_TAG} \
-                --load .
-            """
-
-            sh "docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}"
-        }
-    }
-}
-
-        stage('Login to ECR') {
+        stage('Build & Push Docker Image') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
                     sh """
+                        # Create buildx builder if not exists
+                        docker buildx create --use || true
+                        docker buildx inspect --bootstrap
+
+                        # Login to ECR
                         aws ecr get-login-password --region ${AWS_REGION} | \
                         docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+                        # Build for linux/amd64 and push
+                        docker buildx build \
+                          --platform linux/amd64 \
+                          -t ${ECR_URI}:${IMAGE_TAG} \
+                          --push .
                     """
                 }
             }
         }
 
-        stage('Push Image to ECR') {
+        stage('Deploy to ECS') {
             steps {
-                sh "docker push ${ECR_URI}:${IMAGE_TAG}"
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
+                    sh """
+                        aws ecs update-service \
+                          --cluster shoppingapp \
+                          --service shoppingapp-service \
+                          --force-new-deployment \
+                          --region ${AWS_REGION}
+                    """
+                }
             }
         }
     }
-
-    stage('Deploy to ECS') {
-    steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
-            sh """
-                # Register new task definition revision
-                aws ecs register-task-definition \
-                    --family shoppingapp-task \
-                    --network-mode awsvpc \
-                    --requires-compatibilities FARGATE \
-                    --cpu 256 \
-                    --memory 512 \
-                    --execution-role-arn arn:aws:iam::424522917744:role/ecsTaskExecutionRole \
-                    --container-definitions '[
-                        {
-                            "name": "shoppingapp",
-                            "image": "${ECR_URI}:${IMAGE_TAG}",
-                            "essential": true,
-                            "portMappings": [
-                                {
-                                    "containerPort": 8080,
-                                    "protocol": "tcp"
-                                }
-                            ]
-                        }
-                    ]' \
-                    --region ap-southeast-2
-
-                # Update service with new revision
-                aws ecs update-service \
-                    --cluster shoppingapp \
-                    --service shoppingapp-service \
-                    --force-new-deployment \
-                    --region ap-southeast-2
-            """
-        }
-    }
-}
 
     post {
         success {
