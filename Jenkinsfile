@@ -52,7 +52,7 @@ pipeline {
                     sh """
                         aws ecs update-service \
                           --cluster shoppingapp \
-                          --service shoppingapp-service \
+                          --service ShopApp-service-2x055us1 \
                           --force-new-deployment \
                           --region ${AWS_REGION}
                     """
