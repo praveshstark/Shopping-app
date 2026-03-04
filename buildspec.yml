@@ -22,8 +22,9 @@ phases:
       - echo Pushing image...
       - docker push $REPO_URI:$IMAGE_TAG
       - echo Writing imagedefinitions.json file...
-      - printf '[{"name":"shopping-app-container","imageUri":"%s"}]' $REPO_URI:$IMAGE_TAG > imagedefinitions.json
+      - printf '[{"name":"shoppingapp","imageUri":"%s"}]' $REPO_URI:$IMAGE_TAG > imagedefinitions.json
 
 artifacts:
   files:
     - imagedefinitions.json
+  discard-paths: yes
