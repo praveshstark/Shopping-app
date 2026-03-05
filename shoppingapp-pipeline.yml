@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Full CodePipeline for shoppingapp with ECS deploy
+Description: Full CodePipeline for shoppingapp with ECS deploy (automatic GitHub triggers)
 
 Parameters:
   GitHubRepo:
@@ -68,7 +68,6 @@ Resources:
         Image: aws/codebuild/standard:7.0
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Description: Build project for shoppingapp
-      # Embedded buildspec
       SourceVersion: !Ref GitHubBranch
       BuildSpec: |
         version: 0.2
@@ -170,3 +169,20 @@ Resources:
                 ServiceName: !Ref ECSServiceName
                 FileName: imagedefinitions.json
               RunOrder: 1
+
+  # -------------------------
+  # GitHub Webhook for automatic triggers
+  # -------------------------
+  GitHubWebhook:
+    Type: AWS::CodePipeline::Webhook
+    Properties:
+      Name: shoppingapp-github-webhook
+      TargetPipeline: !Ref ShoppingAppPipeline
+      TargetAction: GitHubSource
+      Filters:
+        - JsonPath: $.ref
+          MatchEquals: !Sub 'refs/heads/${GitHubBranch}'
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: my-webhook-secret
+      RegisterWithThirdParty: true
