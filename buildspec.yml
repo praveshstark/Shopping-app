@@ -4,31 +4,21 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - aws --version
       - IMAGE_TAG=latest
-      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      - REPO_URI=424522917744.dkr.ecr.ap-southeast-2.amazonaws.com/shoppingapp
-      - aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin $REPO_URI
-
+      - REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/shoppingapp
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPO_URI
   build:
     commands:
       - echo Build started on `date`
       - mvn clean package
       - docker build -t shoppingapp:$IMAGE_TAG .
       - docker tag shoppingapp:$IMAGE_TAG $REPO_URI:$IMAGE_TAG
-
   post_build:
-    commands:                 # <-- fix: indent commands under post_build
-      - echo Pushing image...
+    commands:
+      - echo Pushing Docker image...
       - docker push $REPO_URI:$IMAGE_TAG
-      - echo Writing imagedefinitions.json file...
       - printf '[{"name":"shoppingapp","imageUri":"%s"}]' $REPO_URI:$IMAGE_TAG > imagedefinitions.json
-      - echo "Contents of imagedefinitions.json:"
-      - cat imagedefinitions.json
-      - echo "Listing root directory files:"
-      - ls -l
 
 artifacts:
   files:
     - imagedefinitions.json
-  discard-paths: yes

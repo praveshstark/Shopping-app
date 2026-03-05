@@ -57,9 +57,8 @@ Resources:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: shoppingapp-build
-      SSource:
-        Type: GITHUB
-        Location: https://github.com/praveshstark/Shopping-app.gitcls
+      Source:
+        Type: CODEPIPELINE
       Artifacts:
         Type: CODEPIPELINE
       Environment:
@@ -69,31 +68,6 @@ Resources:
         Image: aws/codebuild/standard:7.0
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Description: Build project for shoppingapp
-      SourceVersion: !Ref GitHubBranch
-      BuildSpec: |
-        version: 0.2
-        phases:
-          pre_build:
-            commands:
-              - echo Logging in to Amazon ECR...
-              - IMAGE_TAG=latest
-              - REPO_URI=!Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}'
-              - aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin $REPO_URI
-          build:
-            commands:
-              - echo Build started on `date`
-              - mvn clean package
-              - docker build -t shoppingapp:$IMAGE_TAG .
-              - docker tag shoppingapp:$IMAGE_TAG $REPO_URI:$IMAGE_TAG
-          post_build:
-            commands:
-              - echo Pushing Docker image...
-              - docker push $REPO_URI:$IMAGE_TAG
-              - echo Writing imagedefinitions.json file...
-              - printf '[{"name":"shoppingapp","imageUri":"%s"}]' $REPO_URI:$IMAGE_TAG > imagedefinitions.json
-        artifacts:
-          files:
-            - imagedefinitions.json
 
   # -------------------------
   # CodePipeline Role
@@ -172,7 +146,7 @@ Resources:
               RunOrder: 1
 
   # -------------------------
-  # GitHub Webhook for automatic triggers
+  # GitHub Webhook for automatic triggers (optional)
   # -------------------------
   GitHubWebhook:
     Type: AWS::CodePipeline::Webhook
