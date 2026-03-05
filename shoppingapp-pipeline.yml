@@ -57,8 +57,9 @@ Resources:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: shoppingapp-build
-      Source:
-        Type: CODEPIPELINE
+      SSource:
+        Type: GITHUB
+        Location: https://github.com/praveshstark/Shopping-app.git
       Artifacts:
         Type: CODEPIPELINE
       Environment:
