@@ -59,7 +59,7 @@ Resources:
       Name: shoppingapp-build
       SSource:
         Type: GITHUB
-        Location: https://github.com/praveshstark/Shopping-app.git
+        Location: https://github.com/praveshstark/Shopping-app.gitcls
       Artifacts:
         Type: CODEPIPELINE
       Environment:
